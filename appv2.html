@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NADA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        .selectable {
+            user-select: all;
+            cursor: pointer;
+            white-space: pre-wrap;
+        }
+
+        input {
+            padding: 6px;
+            width: 60%;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 6px 10px;
+        }
+
+        #vozBtn {
+            font-size: 16px;
+        }
+
+        /* 🔽 AUTOCOMPLETE NUEVO AQUÍ */
+        #sugerencias {
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: white;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 60%;
+            z-index: 1000;
+        }
+
+        #sugerencias li {
+            padding: 6px 8px;
+            cursor: pointer;
+        }
+
+        #sugerencias li:hover {
+            background-color: #eee;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Network Organized Non Archive Data Analyst, Search part, write or speak</h2>
+    <div style="position: relative;">
+        <input type="text" id="inputParte" placeholder="Ej: brake repair damage" autocomplete="off">
+        <ul id="sugerencias" style="display: none;"></ul>
+    </div>
+    <button onclick="buscarParte()">Buscar</button>
+    <button id="vozBtn" onclick="activarVoz()">🎤 Hablar</button>
+
+    <table id="tablaResultado" style="display:none;">
+        <thead>
+            <tr>
+                <th>Código de la parte</th>
+                <th>Nombre de la parte</th>
+                <th>3C (una línea por celda)</th>
+            </tr>
+        </thead>
+        <tbody id="resultadoBody"></tbody>
+    </table>
+
+    <script>
+const partes = [
+  { codigo: '013002014', nombre: 'Brake adjustment', match: ["adjustment", "brake", "brake adjustment"] },
+  { codigo: '013002023', nombre: 'Brake drum', match: ["brake", "drum"] },
+  { codigo: '013002028', nombre: 'Slack adjuster', match: ["slack", "adjuster"] },
+  { codigo: '013004027', nombre: 'Brake chamber', match: ["brake", "chamber"] },
+  { codigo: '013010004', nombre: 'Air tank', match: ["airtank"] },
+  { codigo: '013010031', nombre: 'Glad hand seal', match: ["glad", "hand", "seal"] },
+  { codigo: '013011002', nombre: 'Abs sensor', match: ["abs", "sensor"] },
+  { codigo: '013011109', nombre: 'Abs lamp', match: ["abs", "lamp", "abslight"] },
+  { codigo: '013013003', nombre: 'Brake shoe', match: ["brake", "shoe"] },
+  { codigo: '013017004', nombre: 'Camshaft', match: ["cam", "camshaft"] },
+  { codigo: '013017010', nombre: 'Airline / hose', match: ["airline", "hose"] },
+  { codigo: '016008001', nombre: 'Air spring', match: ["air", "spring", "airspring"] },
+  { codigo: '016008003', nombre: 'Shock absorber', match: ["shock", "absorber"] },
+  { codigo: '016018057', nombre: 'Slider air ride susp', match: ["slider", "susp"] },
+  { codigo: '017001023', nombre: 'Tire pneumatic', match: ["tire", "pneumatic"] },
+  { codigo: '017009', nombre: 'Inflation system', match: ["inflate", "inflation", "system"] },
+  { codigo: '017009015', nombre: 'Indicator', match: ["indicator"] },
+  { codigo: '017009047', nombre: 'Thru tee', match: ["tee", "thru"] },
+  { codigo: '018000300', nombre: 'Wheel end inspection', match: ["wheel", "inspect", "inspection"] },
+  { codigo: '034', nombre: 'Light', match: ["light"] },
+  { codigo: '034003032', nombre: 'Way receptacle', match: ["receptacle", "way"] },
+  { codigo: '034003181', nombre: 'Lamp ass turn signal', match: ["lamp", "turnlamp", "signal"] },
+  { codigo: '034004006', nombre: 'Wiring', match: ["wire", "wiring"] },
+  { codigo: '034004021', nombre: 'Lamp marker', match: ["marker", "lamp"] },
+  { codigo: '034004024', nombre: 'Clearance', match: ["clearance"] },
+  { codigo: '053005007', nombre: 'Docbox replace', match: ["docbox"] },
+  { codigo: '053005018', nombre: 'Tape', match: ["tape"] },
+  { codigo: '055001001', nombre: 'Liftg plat ass', match: ["liftgate", "plat"] },
+  { codigo: '055001085', nombre: 'Batt charge', match: ["battery", "charge"] },
+  { codigo: '055001098', nombre: 'Charging system', match: ["charger", "charging", "system"] },
+  { codigo: '055010022', nombre: 'Hose liftgate', match: ["hose", "liftgate"] },
+  { codigo: '055015002', nombre: 'Pump motor', match: ["pump", "motor"] },
+  { codigo: '071001039', nombre: 'Clean floor', match: ["clean", "floor"] },
+  { codigo: '072001028', nombre: 'Bumper', match: ["bumper"] },
+  { codigo: '072003010', nombre: 'Hinge', match: ["hinge"] },
+  { codigo: '072004002', nombre: 'Door track repair', match: ["door", "track"] },
+  { codigo: '072004003', nombre: 'Roller', match: ["roller"] },
+  { codigo: '072004008', nombre: 'Operator', match: ["operator"] },
+  { codigo: '072004009', nombre: 'Door cable', match: ["door", "cable"] },
+  { codigo: '072004064', nombre: 'Adjust spring tension', match: ["tension", "spring", "adjust"] },
+  { codigo: '072004070', nombre: 'Door ass lube', match: ["lube", "door"] },
+  { codigo: '072004088', nombre: 'Pannel wood door/body', match: ["panel", "wood", "door", "body"] },
+  { codigo: '082029019', nombre: 'Latch door', match: ["latch", "door"] },
+  { codigo: '053999', nombre: 'Fluid change', match: ["fluid", "change"] },
+  { codigo: '071013028', nombre: 'Alluminum patch', match: ["patch", "aluminum"] },
+  { codigo: '071002049', nombre: 'Corner radius', match: ["corner", "radius"] },
+  { codigo: '071002043', nombre: 'Corner', match: ["corner"] },
+  { codigo: '072004088', nombre: 'Panel', match: ["panel"] },
+  { codigo: '077003005', nombre: 'Landing leg', match: ["landing", "leg"] },
+  { codigo: '078009001', nombre: 'Mudflap', match: ["mudflap"] },
+  { codigo: '078009003', nombre: 'Mudflap bracket', match: ["bracket", "mudflap"] },
+  { codigo: '077003004', nombre: 'Sand shoe', match: ["sandshoe", "sand", "shoe"] },
+  { codigo: '051002001', nombre: 'Hubodometer', match: ["hodo", "hubodometer"] },
+  { codigo: '018002011', nombre: 'Wheel seal', match: ["wheel", "seal"] },
+  { codigo: '018005006', nombre: 'Bearing', match: ["bearing"] },
+  { codigo: '013002031', nombre: 'Bushing', match: ["bushing"] },
+  { codigo: '055001041', nombre: 'Ramp', match: ["ramp"] }
+];
+
+
+        const input = document.getElementById("inputParte");
+        const sugerencias = document.getElementById("sugerencias");
+
+        input.addEventListener("input", function () {
+            const texto = this.value.toLowerCase();
+            sugerencias.innerHTML = "";
+            if (!texto) {
+                sugerencias.style.display = "none";
+                return;
+            }
+
+            const matches = partes.filter(p =>
+                p.match.some(m => m.includes(texto))
+            );
+
+            if (matches.length === 0) {
+                sugerencias.style.display = "none";
+                return;
+            }
+
+            matches.forEach(p => {
+                const li = document.createElement("li");
+                li.textContent = `${p.nombre} (${p.codigo})`;
+                li.addEventListener("click", () => {
+                    input.value = p.nombre;
+                    sugerencias.style.display = "none";
+                });
+                sugerencias.appendChild(li);
+            });
+
+            sugerencias.style.display = "block";
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!input.contains(e.target)) {
+                sugerencias.style.display = "none";
+            }
+        });
+
+        input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sugerencias.style.display = "none";
+                buscarParte();
+            }
+        });
+
+        function buscarParte() {
+            const entradaOriginal = input.value.trim();
+            const entrada = entradaOriginal.toLowerCase();
+
+            const parteDetectada = partes.find(p =>
+                p.match.some(m => entrada.includes(m)) || entrada.includes(p.nombre.toLowerCase())
+            );
+
+            if (!parteDetectada) {
+                alert("No se encontró una parte reconocida.");
+                return;
+            }
+
+            const nombreParte = parteDetectada.nombre;
+            const esRepair = entrada.includes("repair");
+            const esReplacement = entrada.includes("replacement");
+            const contieneDamage = entrada.includes("damage");
+
+            const accion = esRepair ? "repair" : esReplacement ? "replacement" : "";
+            const estadoFinal = contieneDamage ? "required damage" : "required";
+
+            const linea1 = `✅ ${nombreParte} checked`;
+            const linea2 = `${nombreParte} ${accion} ${estadoFinal}`.trim();
+            const linea3 = accion === 'repair'
+                ? `${nombreParte} repaired`
+                : accion === 'replacement'
+                    ? `${nombreParte} replaced`
+                    : "";
+
+            const tbody = document.getElementById('resultadoBody');
+            [linea1, linea2, linea3].forEach((linea, index) => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${index === 0 ? parteDetectada.codigo : ''}</td>
+                    <td>${index === 0 ? nombreParte : ''}</td>
+                    <td class="selectable">${linea}</td>
+                `;
+                tbody.appendChild(fila);
+            });
+
+            document.getElementById('tablaResultado').style.display = 'table';
+            input.value = '';
+        }
+
+        function activarVoz() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Tu navegador no soporta reconocimiento de voz.");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.start();
+            document.getElementById('vozBtn').innerText = '🎙️ Escuchando...';
+
+            recognition.onresult = function (event) {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                input.value = transcript;
+                document.getElementById('vozBtn').innerText = '🎤 Hablar';
+                buscarParte();
+            };
+
+            recognition.onerror = function (event) {
+                alert("Error en reconocimiento de voz.");
+                document.getElementById('vozBtn').innerText = '🎤 Hablar';
+            };
+
+            recognition.onend = function () {
+                document.getElementById('vozBtn').innerText = '🎤 Hablar';
+            };
+        }
+    </script>
+</body>
+
+</html>
